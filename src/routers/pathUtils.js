@@ -72,16 +72,7 @@ export const createPathParser = (
   paths = Object.entries(pathsByRouteNames);
   paths.sort((a, b) => b[1].priority - a[1].priority);
 
-  const getActionForPathAndParams = (pathToResolve, inputParams = {}) => {
-    // If the path is empty (null or empty string)
-    // just return the initial route action
-    if (!pathToResolve) {
-      return NavigationActions.navigate({
-        routeName: initialRouteName,
-        params: { ...inputParams, ...initialRouteParams },
-      });
-    }
-
+  const getActionForPathAndParams = (pathToResolve = '', inputParams = {}) => {
     // Attempt to match `pathToResolve` with a route in this router's
     // routeConfigs
     let matchedRouteName;
@@ -99,8 +90,17 @@ export const createPathParser = (
       }
     }
 
-    // We didn't match -- return null to signify no action available
+    // We didn't match any of the configured paths
     if (!matchedRouteName) {
+      // In the case of an exact empty path, we want to use the initial action of the router
+      if (pathToResolve === '') {
+        return NavigationActions.navigate({
+          routeName: initialRouteName,
+          params: { ...inputParams, ...initialRouteParams },
+        });
+      }
+
+      // returning nothing will tell the parent that the action cannot be handled
       return null;
     }
 
@@ -153,19 +153,30 @@ export const createPathParser = (
   const getPathAndParamsForRoute = route => {
     const { routeName, params } = route;
     const childRouter = childRouters[routeName];
-    const subPath = pathsByRouteNames[routeName].toPath(params);
+    const { toPath, keys } = pathsByRouteNames[routeName];
+    const subPath = toPath(params);
+    const nonPathParams = {};
+    if (params) {
+      Object.keys(params)
+        .filter(paramName => !keys.find(k => k.name === paramName))
+        .forEach(paramName => {
+          nonPathParams[paramName] = params[paramName];
+        });
+    }
     if (childRouter) {
       // If it has a router it's a navigator.
       // If it doesn't have router it's an ordinary React component.
       const child = childRouter.getPathAndParamsForState(route);
       return {
         path: subPath ? `${subPath}/${child.path}` : child.path,
-        params: child.params ? { ...params, ...child.params } : params,
+        params: child.params
+          ? { ...nonPathParams, ...child.params }
+          : nonPathParams,
       };
     }
     return {
       path: subPath,
-      params,
+      params: nonPathParams,
     };
   };
   return { getActionForPathAndParams, getPathAndParamsForRoute };

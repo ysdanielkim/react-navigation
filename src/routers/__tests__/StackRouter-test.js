@@ -1098,8 +1098,7 @@ describe('StackRouter', () => {
     };
     const { path, params } = router.getPathAndParamsForState(state);
     expect(path).toEqual('f/123/baz/321');
-    expect(params.id).toEqual('123');
-    expect(params.bazId).toEqual('321');
+    expect(params).toEqual({});
   });
 
   test('Handle goBack identified by key', () => {
