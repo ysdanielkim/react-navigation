@@ -66,6 +66,9 @@ export default function getChildEventSubscriber(addListener, key) {
   const upstreamSubscribers = upstreamEvents.map(eventName =>
     addListener(eventName, payload => {
       const { state, lastState, action } = payload;
+
+      if (!action.type.startsWith('Navigation/')) return;
+
       const lastRoutes = lastState && lastState.routes;
       const routes = state && state.routes;
 
